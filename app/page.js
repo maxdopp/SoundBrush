@@ -40,12 +40,15 @@ export default function DrawPage() {
   useEffect(() => {
     if (!synthsRef.current) {
       synthsRef.current = {
-        red: new Tone.PolySynth().toDestination(),
-        yellow: new Tone.PolySynth().toDestination(),
-        green: new Tone.PolySynth().toDestination(),
-        blue: new Tone.PolySynth().toDestination(),
-        indigo: new Tone.PolySynth().toDestination(),
-        purple: new Tone.PolySynth().toDestination(),
+        red: new Tone.MonoSynth().toDestination(),
+        orange: new Tone.MonoSynth().toDestination(),
+        yellow: new Tone.MonoSynth().toDestination(),
+        green: new Tone.MonoSynth().toDestination(),
+        cyan: new Tone.MonoSynth().toDestination(),
+        blue: new Tone.MonoSynth().toDestination(),
+        purple: new Tone.MonoSynth().toDestination(),
+        magenta: new Tone.MonoSynth().toDestination(),
+
       };
     }
     
@@ -58,23 +61,48 @@ export default function DrawPage() {
   }, []);
 
   const colorToNote = {
-    red: "C4",
-    yellow: "D4",
-    green: "E4",
-    blue: "G4",
-    indigo: "A4",
-    purple: "B4",
+    red: "B4",
+    orange: "A4",
+    yellow: "G4",
+    green: "F#4",
+    cyan: "F4",
+    blue: "E4",
+    purple: "D4",
+    magenta: "C4",
   };
 
   function colorToSound(colorHex) {
     const { h } = hexToHSL(colorHex);
-    if (h < 30) return "red";
-    if (h < 60) return "yellow";
-    if (h < 90) return "green";
-    if (h < 150) return "blue";
-    if (h < 250) return "indigo";
-    return "purple";
+  
+    // Define the colors and their central hue points
+    const colorMap = [
+      { name: "red", hue: 0 },
+      { name: "orange", hue: 45 },
+      { name: "yellow", hue: 75 },
+      { name: "green", hue: 120 },
+      { name: "cyan", hue: 180 },
+      { name: "blue", hue: 210 },
+      { name: "purple", hue: 270 },
+      { name: "magenta", hue: 330 },
+    ];
+  
+    // Find the color whose hue is closest to the actual hue
+    let closest = colorMap[0];
+    let minDiff = 360; // max hue difference
+  
+    colorMap.forEach((c) => {
+      // calculate circular distance in hue (0-360)
+      let diff = Math.abs(h - c.hue);
+      if (diff > 180) diff = 360 - diff;
+      if (diff < minDiff) {
+        minDiff = diff;
+        closest = c;
+      }
+    });
+  
+    return closest.name;
   }
+
   function hexToHSL(H) {
     // Convert hex -> HSL
     let r = 0, g = 0, b = 0;
@@ -129,6 +157,22 @@ export default function DrawPage() {
     };
     p.draw = () => {};
 
+    //make sure tone is triggered
+    async function playNote(color) {
+      const soundColor = colorToSound(color);
+      const note = colorToNote[soundColor];
+      const synth = synthsRef.current?.[soundColor];
+      if (!note || !synth) return;
+    
+      // Ensure Tone context is started
+      if (Tone.context.state !== "running") {
+        await Tone.start();
+        console.log("Audio context started");
+      }
+    
+      synth.triggerAttackRelease(note, "8n");
+    }
+
     p.mouseDragged = () => {
       if (drawing && p.mouseX >= 0 && p.mouseX <= p.width && p.mouseY >= 0 && p.mouseY <= p.height) {
         const stroke = {
@@ -145,18 +189,7 @@ export default function DrawPage() {
         p.strokeWeight(size);
         p.line(p.pmouseX, p.pmouseY, p.mouseX, p.mouseY);
     
-        const soundColor = colorToSound(color);
-        const note = colorToNote[soundColor];
-        const synth = synthsRef.current?.[soundColor];
-        if (note && synth) {
-          try {
-            if (Tone.context.state === "running") {
-              synth.triggerAttackRelease(note, "8n");
-            }
-          } catch (err) {
-            console.warn("Tone.js synth error:", err);
-          }
-        }
+        playNote(color);
       }
     };
     
