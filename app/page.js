@@ -57,32 +57,31 @@ export default function DrawPage() {
     p.draw = () => {};
 
     p.mouseDragged = () => {
-      if(drawing){
+      if (drawing && p.mouseX >= 0 && p.mouseX <= p.width && p.mouseY >= 0 && p.mouseY <= p.height) {
         const stroke = {
-        x1: p.pmouseX,
-        y1: p.pmouseY,
-        x2: p.mouseX,
-        y2: p.mouseY,
-        color: color,
-        size: size
-      };
-      // Ensure there's a current stroke group to push into
-      if (strokesRef.current.length === 0) {
-        strokesRef.current.push([]);
-      }
-      strokesRef.current[strokesRef.current.length - 1].push(stroke);
+          x1: p.pmouseX,
+          y1: p.pmouseY,
+          x2: p.mouseX,
+          y2: p.mouseY,
+          color: color,
+          size: size
+        };
+        strokesRef.current[strokesRef.current.length - 1].push(stroke);
 
-      p.stroke(color);
-      p.strokeWeight(size);
-      p.line(p.pmouseX, p.pmouseY, p.mouseX, p.mouseY);
+        p.stroke(color);
+        p.strokeWeight(size);
+        p.line(p.pmouseX, p.pmouseY, p.mouseX, p.mouseY);
       }
     };
 
     p.mousePressed = async () => {
-      // Starting a new stroke group. Clear redo stack because new action invalidates redo history.
-      undosRef.current = [];
-      strokesRef.current.push([]);
-      drawing = true;
+      // Check if mouse is within canvas bounds
+      if (p.mouseX >= 0 && p.mouseX <= p.width && p.mouseY >= 0 && p.mouseY <= p.height) {
+        // Starting a new stroke group. Clear redo stack because new action invalidates redo history.
+        undosRef.current = [];
+        strokesRef.current.push([]);
+        drawing = true;
+      }
     }
 
     p.mouseReleased = async () => {
@@ -106,10 +105,10 @@ export default function DrawPage() {
         }
       }
       else if (p.key === "u"){
-        p.undo(strokesRef.current, undosRef.current);
+        p.undo();
       }
       else if (p.key === "r"){
-        p.redo(strokesRef.current, undosRef.current);
+        p.redo();
       }
     };
 
@@ -150,28 +149,33 @@ export default function DrawPage() {
       size = newSize;
     };
 
-    p.undo = (strokes, undos) => {
-      const before = strokes.length;
-      const beforeUndos = undos.length;
-      console.log('[p.undo] before:', before, 'undos:', beforeUndos);
-      let undo = strokes.pop();
+    p.undo = () => {
+      console.log(strokesRef.current);
+      console.log(undosRef.current);
+      if(strokesRef.current.length > 0 && strokesRef.current[strokesRef.current.length - 1].length === 0){
+        strokesRef.current.pop();
+      }
+      let undo = strokesRef.current.pop();
       if (undo !== undefined) {
-        undos.push(undo);
+        undosRef.current.push(undo);
         // Redraw entire canvas
         p.background(255);
         p.redrawFromStrokes();
       } else {
         console.log('[p.undo] nothing to undo');
       }
-      console.log('[p.undo] after:', strokes.length, 'undos:', undos.length);
+      console.log(strokesRef.current);
+      console.log(undosRef.current);
     }
 
-    p.redo = (strokes, undos) => {
-      console.log('[p.redo] before strokes:', strokes.length, 'undos:', undos.length);
-      let redo = undos.pop();
+    p.redo = () => {
+      console.log(strokesRef.current);
+      console.log(undosRef.current);
+      let redo = undosRef.current.pop();
+      console.log(redo);
       if (redo !== undefined) {
         // Add back the stroke group
-        strokes.push(redo);
+        strokesRef.current.push(redo);
         // Draw the entire stroke group
         redo.forEach((stroke) => {
           p.stroke(stroke.color);
@@ -181,7 +185,8 @@ export default function DrawPage() {
       } else {
         console.log('[p.redo] nothing to redo');
       }
-      console.log('[p.redo] after strokes:', strokes.length, 'undos:', undos.length);
+      console.log(strokesRef.current);
+      console.log(undosRef.current);
     }
 
     p5Ref.current = p; // save instance
@@ -201,14 +206,14 @@ export default function DrawPage() {
   const handleUndo = () => {
     console.log('[handleUndo] called');
     if (p5Ref.current) {
-      p5Ref.current.undo(strokesRef.current, undosRef.current);
+      p5Ref.current.undo();
     }
   }
 
   const handleRedo = () => {
     console.log('[handleRedo] called');
     if (p5Ref.current) {
-      p5Ref.current.redo(strokesRef.current, undosRef.current);
+      p5Ref.current.redo();
     }
   }
 
@@ -288,9 +293,7 @@ export default function DrawPage() {
                 padding: "5px"
               }}
               name="undo"
-              onClick={() => {
-                handleUndo()
-              }}
+              onClick={handleUndo}
             >Undo</button>
             <button
             style={{
@@ -300,9 +303,7 @@ export default function DrawPage() {
                 padding: "5px"
               }}
               name="redo"
-              onClick={() => {
-                handleRedo()
-              }}
+              onClick={handleRedo}
             >Redo</button>
           </div>
           {/* Clear Button */}
