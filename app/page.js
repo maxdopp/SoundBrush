@@ -8,6 +8,8 @@ import P5Sketch from "./components/P5Sketch";
 export default function DrawPage() {
   // Brush state
   const [brushColor, setBrushColor] = useState("#000000");
+  const colors = ["#ff0000", "#ffff00", "#00ff00", "#00ffff", "#0000ff", "#ff00ff"];
+  const [colorNum, setColorNum] = useState(0);
   const [brushSize, setBrushSize] = useState(10);
 
   const [drawings, setDrawings] = useState([]);
@@ -40,27 +42,97 @@ export default function DrawPage() {
       if ((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === "z") {
         // Prevent browser's default undo
         e.preventDefault();
-        if (p5Ref.current && typeof p5Ref.current.undo === "function") {
+        if (p5Ref.current) {
           p5Ref.current.undo();
-        } else {
-          // Optional: helpful debug if undo isn't available yet
-          console.log('[keydown] undo requested but p5Ref.current.undo not available');
         }
       }else if ((e.ctrlKey || e.metaKey) && e.key && e.key.toLowerCase() === "y") {
         // Prevent browser's default undo
         e.preventDefault();
-        if (p5Ref.current && typeof p5Ref.current.undo === "function") {
+        if (p5Ref.current) {
           p5Ref.current.redo();
-        } else {
-          // Optional: helpful debug if undo isn't available yet
-          console.log('[keydown] undo requested but p5Ref.current.undo not available');
+        }
+      }else if (e.key === "1") {
+        // Prevent browser's default undo
+        e.preventDefault();
+        if (p5Ref.current) {
+          p5Ref.current.setBrush(colors[0], brushSize);
+          setBrushColor(colors[0]);
+        }
+      }else if (e.key === "2") {
+        // Prevent browser's default undo
+        e.preventDefault();
+        if (p5Ref.current) {
+          p5Ref.current.setBrush(colors[1], brushSize);
+          setBrushColor(colors[1]);
+        }
+      }else if (e.key === "3") {
+        // Prevent browser's default undo
+        e.preventDefault();
+        if (p5Ref.current) {
+          p5Ref.current.setBrush(colors[2], brushSize);
+          setBrushColor(colors[2]);
+        }
+      }else if (e.key === "4") {
+        // Prevent browser's default undo
+        e.preventDefault();
+        if (p5Ref.current) {
+          p5Ref.current.setBrush(colors[3], brushSize);
+          setBrushColor(colors[3]);
+        }
+      }else if (e.key === "5") {
+        // Prevent browser's default undo
+        e.preventDefault();
+        if (p5Ref.current) {
+          p5Ref.current.setBrush(colors[4], brushSize);
+          setBrushColor(colors[4]);
+        }
+      }else if (e.key === "6") {
+        // Prevent browser's default undo
+        e.preventDefault();
+        if (p5Ref.current) {
+          p5Ref.current.setBrush(colors[5], brushSize);
+          setBrushColor(colors[5]);
+        }
+      }else if (e.key === "ArrowRight") {
+        // Prevent browser's default undo
+        e.preventDefault();
+        if (p5Ref.current) {
+          const nextColor = (colorNum + 1) % 6;
+          setColorNum(nextColor);
+          p5Ref.current.setBrush(colors[nextColor], brushSize);
+          setBrushColor(colors[nextColor]);
+        }
+      }else if (e.key === "ArrowLeft") {
+        // Prevent browser's default undo
+        e.preventDefault();
+        if (p5Ref.current) {
+          const prevColor = (colorNum - 1 + 6) % 6; // +6 to handle negative numbers
+          setColorNum(prevColor);
+          p5Ref.current.setBrush(colors[prevColor], brushSize);
+          setBrushColor(colors[prevColor]);
+        }
+      }else if (e.key === "ArrowUp") {
+        // Prevent browser's default undo
+        e.preventDefault();
+        if (p5Ref.current) {
+          let size = Math.min(brushSize + 1, 100);
+          p5Ref.current.setBrush(brushColor, size);
+          setBrushSize(size);
+        }
+      }else if (e.key === "ArrowDown") {
+        // Prevent browser's default undo
+        e.preventDefault();
+        if (p5Ref.current) {
+          let size = Math.max(brushSize - 1, 0);
+          p5Ref.current.setBrush(brushColor, size);
+          setBrushSize(size);
         }
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [brushSize, brushColor, colorNum]); // Add colorNum to dependencies
 
   //define synths
   const synthsRef = useRef(null);
@@ -382,7 +454,7 @@ export default function DrawPage() {
       {/* Toolbar */}
       <div className="flex flex-col justify-start px-6">
         <h1 className="text-4xl font-bold text-center my-10">SoundBrush</h1>
-        <ColorWheel onColorChange={handleColorChange} />
+        <ColorWheel color={brushColor} onColorChange={handleColorChange} />
         <div
           style={{
             height: "auto",

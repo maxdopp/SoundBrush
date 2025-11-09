@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 
-export default function ColorWheel({ onColorChange }) {
+export default function ColorWheel({ onColorChange, color }) {
   const canvasRef = useRef(null);
   const [selectedHue, setSelectedHue] = useState(0);
   const [lightness, setLightness] = useState(0.5);
@@ -62,6 +62,31 @@ export default function ColorWheel({ onColorChange }) {
 
     ctx.putImageData(img, 0, 0);
   }, []);
+
+  // Update wheel state when parent `color` prop changes
+  useEffect(() => {
+    if (!color) return;
+    const { h, s, l } = hexToHSL(color); // h: 0-360, s/l: 0-1
+
+    setSelectedHue(h);
+    setSaturation(s);
+    setLightness(l);
+    setSelectedColor(color);
+    setColorName(getColorName(h));
+
+    // compute marker position along the ring for this hue
+    const angle = h; // degrees
+    const theta = (angle - 180) * Math.PI / 180; // reverse of atan2(y,x)*(180/PI)+180
+    const outer = CSS_SIZE / 2;
+    const inner = INNER_RADIUS_CSS;
+    const radius = (outer + inner) / 2;
+    const cx = CSS_SIZE / 2;
+    const cy = CSS_SIZE / 2;
+    const cssX = cx + Math.cos(theta) * radius;
+    const cssY = cy + Math.sin(theta) * radius;
+
+    setMarkerPos({ x: cssX, y: cssY });
+  }, [color]);
 
   const handleClick = (e) => {
     const canvas = canvasRef.current;
@@ -211,6 +236,36 @@ export default function ColorWheel({ onColorChange }) {
 }
 
 /* ---------- Helpers ---------- */
+function hexToHSL(H) {
+  // expects hex like '#rrggbb' or '#rgb'
+  let r = 0, g = 0, b = 0;
+  if (H.length === 4) {
+    r = parseInt(H[1] + H[1], 16);
+    g = parseInt(H[2] + H[2], 16);
+    b = parseInt(H[3] + H[3], 16);
+  } else if (H.length === 7) {
+    r = parseInt(H[1] + H[2], 16);
+    g = parseInt(H[3] + H[4], 16);
+    b = parseInt(H[5] + H[6], 16);
+  }
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const cmax = Math.max(r, g, b);
+  const cmin = Math.min(r, g, b);
+  const delta = cmax - cmin;
+  let h = 0;
+  if (delta === 0) h = 0;
+  else if (cmax === r) h = ((g - b) / delta) % 6;
+  else if (cmax === g) h = (b - r) / delta + 2;
+  else h = (r - g) / delta + 4;
+  h = Math.round(h * 60);
+  if (h < 0) h += 360;
+  const l = (cmax + cmin) / 2;
+  const s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+  return { h, s, l };
+}
+
 function hslToRgb(h, s, l) {
   let r, g, b;
   if (s === 0) r = g = b = l;
